@@ -12,8 +12,6 @@ license:            MIT
 license-file:       COPYING
 build-type:         Simple
 github:             luispedro/safeio
-source-dirs:
- - ./
 
 extra-source-files:
  - README.md
@@ -21,12 +19,9 @@ extra-source-files:
 dependencies:
  - base > 4.8 && < 5
  - bytestring
- - conduit >= 1.0
- - conduit-combinators
  - directory
  - exceptions
  - filepath
- - resourcet
  - unix
 ghc-options:
  - -Wall
@@ -35,22 +30,42 @@ default-extensions:
   - OverloadedStrings
   - CPP
 
+flags:
+  with-conduit:
+    description: compile with support with conduit
+    default: true
+    manual: true
+
 when:
   - condition: ! 'os(windows)'
     cpp-options:
       - -DWINDOWS
+  - condition: 'flag(with-conduit)'
+    dependencies:
+     - conduit >= 1.0
+     - conduit-combinators
+     - resourcet
 
 library:
+  source-dirs:
+   - ./
   exposed-modules:
       - System.IO.SafeWrite
-      - Data.Conduit.SafeWrite
   other-modules: []
+  when:
+    - condition: 'flag(with-conduit)'
+      exposed-modules:
+        - Data.Conduit.SafeWrite
 
 tests:
   safeiotest:
     main: System/IO/SafeWrite/Tests.hs
+    source-dirs:
+     - ./test/
+    other-modules: []
     dependencies:
+      - safeio
       - HUnit
       - test-framework
       - test-framework-hunit
-      - test-framework-th
+

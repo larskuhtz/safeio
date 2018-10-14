@@ -1,15 +1,17 @@
-{-# LANGUAGE OverloadedStrings, TemplateHaskell, QuasiQuotes #-}
+{-# LANGUAGE OverloadedStrings, TemplateHaskell, QuasiQuotes, CPP #-}
 
 module Main where
 
-import           Test.Framework.TH
+import           Test.Framework
 import           Test.HUnit
 import           Test.Framework.Providers.HUnit
 
 import qualified Data.ByteString as B
+#ifdef VERSION_conduit
 import qualified Data.Conduit as C
 import qualified Data.Conduit.Combinators as CC
 import           Data.Conduit ((.|))
+#endif
 import           Control.Monad.IO.Class (liftIO)
 import           Control.Exception (throwIO)
 import           System.IO.Error (isDoesNotExistError, catchIOError)
@@ -17,12 +19,28 @@ import           System.Directory (doesFileExist, removeFile, createDirectory, r
 import           System.IO (hPutStrLn)
 
 import System.IO.SafeWrite
+#ifdef VERSION_conduit
 import Data.Conduit.SafeWrite
+#endif
 
 main :: IO ()
 main = do
     removeFileIfExists outname
-    $(defaultMainGenerator)
+    defaultMain
+        [ testGroup "Main"
+            [ testCase "create_output" case_create_output
+            , testCase "not_create_on_exception" case_not_create_on_exception
+            , testCase "no_intermediate_output" case_no_intermediate_output
+            , testCase "in_subdirectory" case_in_subdirectory
+#ifdef VERSION_conduit
+            , testCase "conduit_create_output" case_conduit_create_output
+            , testCase "conduit_create_output_pass" case_conduit_create_output_pass
+            , testCase "conduit_not_create_on_exception" case_conduit_not_create_on_exception
+            , testCase "conduit_no_intermediate_output" case_conduit_no_intermediate_output
+            , testCase "conduit_in_subdirectory" case_conduit_in_subdirectory
+#endif
+            ]
+        ]
 
 removeFileIfExists :: FilePath -> IO ()
 removeFileIfExists fp = removeFile fp `catchIOError` ignoreDoesNotExistError
@@ -64,6 +82,7 @@ case_in_subdirectory = do
     removeFile ofname
     removeDirectory subdir
 
+#ifdef VERSION_conduit
 case_conduit_create_output = do
     C.runConduitRes $
         C.yield "Hello World" .| safeSinkFile outname
@@ -113,4 +132,4 @@ case_conduit_in_subdirectory = do
     (doesFileExist ofname) >>= assertBool "Output file was not created"
     removeFile ofname
     removeDirectory subdir
-
+#endif
